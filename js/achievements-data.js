@@ -434,6 +434,20 @@ window.calculateTierProgress = function(achievement, currentCount = 0, explicitl
   const isMaxTier = earnedTierLevel === tiers.length;
   const nextTierObj = isMaxTier ? null : tiers[earnedTierLevel];
 
+  // Guaranteed threshold from earned tier (never display a lower count than what tier proves)
+  const verifiedMin = highestTierObj && highestTierObj.threshold !== null ? highestTierObj.threshold : 0;
+  let effectiveCount = currentCount;
+  let isVerifiedMinimum = false;
+
+  if (earnedTierLevel > 0) {
+    if (effectiveCount === null || effectiveCount === undefined || effectiveCount < verifiedMin) {
+      effectiveCount = verifiedMin;
+      isVerifiedMinimum = true;
+    }
+  } else if (effectiveCount === null || effectiveCount === undefined) {
+    effectiveCount = 0;
+  }
+
   let progressPercent = 0;
   let remainingCount = null;
   let progressSummary = "";
@@ -443,20 +457,20 @@ window.calculateTierProgress = function(achievement, currentCount = 0, explicitl
     progressSummary = `Max tier reached (${highestTierObj.name} x${earnedTierLevel})!`;
   } else if (nextTierObj && nextTierObj.threshold !== null) {
     const targetThreshold = nextTierObj.threshold;
-    const safeCount = currentCount || 0;
     
     // Percentage relative to target
-    progressPercent = Math.min(100, Math.round((safeCount / targetThreshold) * 100));
-    remainingCount = Math.max(0, targetThreshold - safeCount);
+    progressPercent = Math.min(100, Math.round((effectiveCount / targetThreshold) * 100));
+    remainingCount = Math.max(0, targetThreshold - effectiveCount);
 
+    const countLabelPrefix = isVerifiedMinimum ? "Verified Minimum: " : "";
     if (earnedTierLevel === 0) {
-      if (safeCount > 0) {
-        progressSummary = `${safeCount} / ${targetThreshold} ${achievement.metricName || 'units'} (${remainingCount} more to unlock x1 ${nextTierObj.name})`;
+      if (effectiveCount > 0) {
+        progressSummary = `${effectiveCount} / ${targetThreshold} ${achievement.metricName || 'units'} (${remainingCount} more to unlock x1 ${nextTierObj.name})`;
       } else {
         progressSummary = `Need ${targetThreshold} ${achievement.metricName || 'units'} to unlock x1 ${nextTierObj.name}`;
       }
     } else {
-      progressSummary = `${safeCount} / ${targetThreshold} ${achievement.metricName || 'units'} — ${remainingCount} more to reach x${nextTierObj.tier || (earnedTierLevel + 1)} ${nextTierObj.name}`;
+      progressSummary = `${countLabelPrefix}${effectiveCount} / ${targetThreshold} ${achievement.metricName || 'units'} — ${remainingCount} more to reach x${nextTierObj.tier || (earnedTierLevel + 1)} ${nextTierObj.name}`;
     }
   } else {
     progressSummary = earnedTierLevel > 0 ? `Earned (${highestTierObj.name})` : "Locked";
@@ -469,7 +483,7 @@ window.calculateTierProgress = function(achievement, currentCount = 0, explicitl
   let status = "locked";
   if (earnedTierLevel > 0) {
     status = "earned";
-  } else if (currentCount > 0) {
+  } else if (effectiveCount > 0) {
     status = "in-progress";
   }
 
@@ -481,13 +495,15 @@ window.calculateTierProgress = function(achievement, currentCount = 0, explicitl
     badgeImg: displayBadgeImg,
     nextTier: nextTierObj,
     progressPercent,
-    currentCount,
+    currentCount: effectiveCount,
+    isVerifiedMinimum,
     nextThreshold: nextTierObj ? nextTierObj.threshold : null,
     remainingCount,
     progressSummary,
     isMaxTier,
     corsRestricted: !!options.corsRestricted,
-    profileTabUrl: options.profileTabUrl || null
+    profileTabUrl: options.profileTabUrl || null,
+    confidence: isVerifiedMinimum ? "VERIFIED_MINIMUM" : (earnedTierLevel > 0 ? "VERIFIED" : (effectiveCount > 0 ? "ESTIMATED" : "UNAVAILABLE"))
   };
 };
 

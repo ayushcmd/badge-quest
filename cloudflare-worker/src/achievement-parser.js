@@ -125,14 +125,23 @@ export function parseAchievementDetail(html, slug) {
 
   // 5. Extract milestones history
   const milestones = [];
-  const milestoneRegex = /<div[^>]+class="[^"]*achievement-history-tier[^"]*"[^>]*>[\s\S]*?<a[^>]+href="([^"]+)"[^>]*>([^<]+)<\/a>\s*·\s*<span>([^<]+)<\/span>/gi;
-  let mMatch;
-  while ((mMatch = milestoneRegex.exec(html)) !== null) {
-    milestones.push({
-      url: mMatch[1],
-      target: mMatch[2].trim(),
-      label: mMatch[3].trim()
-    });
+  const milestoneBlocks = [...html.matchAll(/<div[^>]+class="[^"]*achievement-history-tier[^"]*"[^>]*>[\s\S]*?<div[^>]+class="[^"]*TimelineItem-body[^"]*"[^>]*>([\s\S]*?)<\/div>/gi)];
+
+  for (const block of milestoneBlocks) {
+    const raw = block[1];
+    const linkMatch = raw.match(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+    const parts = raw.split("·");
+    const label = parts.length > 1 ? parts[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
+    const target = linkMatch ? linkMatch[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : null;
+    const url = linkMatch ? linkMatch[1] : null;
+
+    if (url || label) {
+      milestones.push({
+        url,
+        target,
+        label
+      });
+    }
   }
 
   return {

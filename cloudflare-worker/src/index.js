@@ -1,8 +1,8 @@
 /**
  * Badge Quest — Cloudflare Worker API
  * 
- * Provides server-side retrieval and normalization of public GitHub achievements.
- * Fully compatible with GitHub Pages static frontend.
+ * Provides server-side retrieval, normalization, and live activity counter calculation
+ * for public GitHub achievements. Fully compatible with GitHub Pages static frontend.
  */
 
 import { validateUsername, validateSlug } from "./validation.js";
@@ -65,7 +65,7 @@ export default {
       return jsonResponse({
         status: "healthy",
         service: "badgequest-api",
-        version: "1.0.0",
+        version: "1.1.0",
         timestamp: new Date().toISOString(),
         environment: env.ENVIRONMENT || "production"
       }, 200, cors);
@@ -82,6 +82,42 @@ export default {
 
     // 3. Routing
     try {
+      // /api/activity/:username/:slug
+      const actDetailMatch = pathname.match(/^\/api\/activity\/([^/]+)\/([^/]+)$/i);
+      if (actDetailMatch) {
+        const uVal = validateUsername(actDetailMatch[1]);
+        if (!uVal.valid) return jsonResponse({ error: uVal.error }, 400, cors);
+
+        const sVal = validateSlug(actDetailMatch[2]);
+        if (!sVal.valid) return jsonResponse({ error: sVal.error }, 400, cors);
+
+        const fullResult = await getUserAchievements(uVal.username);
+        const act = fullResult.activities ? fullResult.activities[sVal.slug] : null;
+        if (!act) {
+          return jsonResponse({ error: "Activity counter not found for specified slug." }, 404, cors);
+        }
+        const resp = jsonResponse(act, 200, { ...cors, ...getCacheHeaders(false) });
+        await putCache(request, resp, ctx);
+        return resp;
+      }
+
+      // /api/activity/:username
+      const actUserMatch = pathname.match(/^\/api\/activity\/([^/]+)$/i);
+      if (actUserMatch) {
+        const uVal = validateUsername(actUserMatch[1]);
+        if (!uVal.valid) return jsonResponse({ error: uVal.error }, 400, cors);
+
+        const fullResult = await getUserAchievements(uVal.username);
+        const resp = jsonResponse({
+          username: uVal.username,
+          activities: fullResult.activities,
+          contextSummary: fullResult.contextSummary,
+          lastUpdated: fullResult.lastUpdated
+        }, 200, { ...cors, ...getCacheHeaders(false) });
+        await putCache(request, resp, ctx);
+        return resp;
+      }
+
       // /api/achievements/:username/:slug
       const detailMatch = pathname.match(/^\/api\/achievements\/([^/]+)\/([^/]+)$/i);
       if (detailMatch) {
@@ -116,7 +152,9 @@ export default {
           "GET /api/health",
           "GET /api/achievements/:username",
           "GET /api/achievements/:username/:slug",
-          "GET /api/analyze/:username"
+          "GET /api/analyze/:username",
+          "GET /api/activity/:username",
+          "GET /api/activity/:username/:slug"
         ]
       }, 404, cors);
 

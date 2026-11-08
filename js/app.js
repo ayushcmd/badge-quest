@@ -368,41 +368,52 @@
         statusText = "Staff Only";
       }
 
-      // Micro progress or CORS inspection note
+      // Micro progress or activity counter on card
       let microProgressHTML = "";
-      if (item.id === "starstruck" && p.currentCount !== null && p.currentCount !== undefined) {
-        const repoNote = item.detectionMeta && item.detectionMeta.bestRepoName
-          ? `Top: "${item.detectionMeta.bestRepoName}"`
-          : `${p.currentCount} stars`;
-        if (p.isMaxTier) {
-          microProgressHTML = `
-            <div class="card-micro-progress" title="${repoNote}">
-              <div class="micro-progress-bar"><div class="micro-progress-fill" style="width: 100%; background: #facc15;"></div></div>
-              <div class="micro-progress-text" style="color: #facc15;">Max Tier Complete</div>
-            </div>`;
-        } else if (p.nextTier && p.nextThreshold) {
-          microProgressHTML = `
-            <div class="card-micro-progress" title="${repoNote}">
-              <div class="micro-progress-bar"><div class="micro-progress-fill" style="width: ${p.progressPercent}%;"></div></div>
-              <div class="micro-progress-text">${p.currentCount} / ${p.nextThreshold} (${p.remainingCount} left)</div>
-            </div>`;
-        }
-      } else if (!p.isMaxTier && p.nextTier && p.remainingCount !== null && p.remainingCount > 0 && p.nextThreshold !== null && p.currentCount !== null) {
-        microProgressHTML = `
-          <div class="card-micro-progress" title="${p.progressSummary}">
-            <div class="micro-progress-bar">
-              <div class="micro-progress-fill" style="width: ${p.progressPercent}%;"></div>
-            </div>
-            <div class="micro-progress-text">${p.currentCount} / ${p.nextThreshold} (${p.remainingCount} left)</div>
-          </div>
-        `;
-      } else if (p.isMaxTier) {
+      const isMax = p.isMaxTier;
+
+      if (isMax) {
         microProgressHTML = `
           <div class="card-micro-progress" title="Max Tier Complete">
             <div class="micro-progress-bar">
               <div class="micro-progress-fill" style="width: 100%; background: #facc15;"></div>
             </div>
-            <div class="micro-progress-text" style="color: #facc15;">Max Tier Complete</div>
+            <div class="micro-progress-text" style="color: #facc15;">
+              ${p.currentCount !== null ? `${p.currentCount.toLocaleString()} ${item.metricName || 'units'} · ` : ''}Max Tier Complete
+            </div>
+          </div>
+        `;
+      } else if (p.currentCount !== null && p.currentCount !== undefined && p.nextThreshold !== null) {
+        const countPrefix = p.isVerifiedMinimum ? "≥ " : "";
+        const labelText = `${countPrefix}${p.currentCount.toLocaleString()} / ${p.nextThreshold.toLocaleString()} ${item.metricName || 'units'}`;
+        const remainingText = p.remainingCount !== null && p.remainingCount > 0
+          ? `${p.remainingCount.toLocaleString()} left to ${p.nextTier ? p.nextTier.name : 'Next'}`
+          : "Target reached";
+
+        microProgressHTML = `
+          <div class="card-micro-progress" title="${labelText} (${remainingText})">
+            <div class="micro-progress-bar">
+              <div class="micro-progress-fill" style="width: ${p.progressPercent}%;"></div>
+            </div>
+            <div class="micro-progress-text">
+              ${labelText} (${remainingText})
+            </div>
+          </div>
+        `;
+      } else if (item.category === "earnable" && (p.status === "earned" || p.status === "in-progress")) {
+        microProgressHTML = `
+          <div class="card-micro-progress">
+            <div class="micro-progress-text" style="color: #94a3b8; font-style: italic;">
+              Live count unavailable — achievement tier verified.
+            </div>
+          </div>
+        `;
+      } else if (item.category === "earnable" && p.nextThreshold !== null) {
+        microProgressHTML = `
+          <div class="card-micro-progress">
+            <div class="micro-progress-text" style="color: #64748b;">
+              Milestone: ${p.nextThreshold} ${item.metricName || 'units'}
+            </div>
           </div>
         `;
       } else if (p.corsRestricted && currentProfile.username) {
@@ -562,60 +573,119 @@
 
     // Render User Progress Details
     const p = item.progress;
-    let progressBoxHTML = "";
-    if (p.isMaxTier) {
-      progressBoxHTML = `
-        <div style="background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3); border-radius: 12px; padding: 14px; margin-top: 14px;">
-          <strong style="color: #facc15;">🏆 Maximum Tier Achieved!</strong>
-          <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">You have achieved the highest tier (${p.earnedTierName} x${p.earnedTierLevel}) for this achievement.</p>
-        </div>
-      `;
-    } else if (item.id === "starstruck" && item.detectionMeta && item.detectionMeta.bestRepoName) {
-      progressBoxHTML = `
-        <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 14px; margin-top: 14px;">
-          <strong style="color: #4ade80;">⭐ Verified via Public REST API</strong>
-          <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">
-            Highest starred public repository: <strong><a href="${item.detectionMeta.bestRepoUrl}" target="_blank" style="color:#bbf452;">${item.detectionMeta.bestRepoName}</a></strong> with <strong>${item.detectionMeta.count.toLocaleString()}</strong> stars.
-          </p>
-          <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">${p.progressSummary}</p>
-        </div>
-      `;
-    } else if (p.corsRestricted) {
-      const username = currentProfile.username || "username";
-      progressBoxHTML = `
-        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 14px; margin-top: 14px;">
-          <strong style="color: #38bdf8;">🌐 Browser CORS Limitation</strong>
-          <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px; line-height: 1.5;">
-            GitHub restricts direct client-side scraping of user achievement fragments on static websites.
-          </p>
-          <div style="margin-top: 10px;">
-            <a href="https://github.com/${encodeURIComponent(username)}?tab=achievements" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); border-radius:999px; color:#38bdf8; font-weight:700; font-size:0.8rem; text-decoration:none;">
-              Open @${username}'s Achievements on GitHub ↗
-            </a>
-          </div>
-        </div>
-      `;
-    } else if (p.status === "earned" && p.nextTier) {
-      const progressDetailText = p.currentCount !== null && p.remainingCount !== null
-        ? `<p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">Current Progress: ${p.currentCount} / ${p.nextThreshold} ${item.metricName || 'units'}</p>
-           <p style="font-size: 0.85rem; color: #facc15; margin-top: 4px;">${p.remainingCount} more ${item.metricName || 'units'} to reach x${p.nextTier.tier} ${p.nextTier.name}.</p>`
-        : `<p style="font-size: 0.85rem; color: #facc15; margin-top: 4px;">Next milestone target: x${p.nextTier.tier} ${p.nextTier.name} (${p.nextTier.threshold} ${item.metricName || 'units'}).</p>
-           <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 2px;">Numerical activity count between tiers is private to the profile owner.</p>`;
+    const meta = item.detectionMeta || {};
+    const act = meta.activity || null;
+    const confidenceLevel = act ? act.confidence : (p.confidence || "VERIFIED");
+    const sourceLabel = act ? act.source : (meta.source || (item.id === "starstruck" ? "GitHub REST API (repos)" : "GitHub Public Activity"));
+    const milestones = act?.milestones || meta.milestones || [];
+    const isEarned = p.status === "earned";
 
-      progressBoxHTML = `
-        <div style="background: rgba(74, 222, 128, 0.1); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; padding: 14px; margin-top: 14px;">
-          <strong style="color: #4ade80;">Status: Verified Earned ${p.earnedTierName} tier!</strong>
-          ${progressDetailText}
+    let progressBoxHTML = "";
+
+    // Confidence pill
+    const confClass = `confidence-${confidenceLevel.toLowerCase()}`;
+    const confPill = `<span class="confidence-pill ${confClass}">${confidenceLevel.replace(/_/g, ' ')}</span>`;
+
+    // Activity Count Details
+    let countSummaryHTML = "";
+    if (p.isMaxTier) {
+      countSummaryHTML = `
+        <div style="margin-top: 8px;">
+          <p style="font-size: 0.9rem; color: #facc15; font-weight: 700;">🏆 100% Unlocked (${p.earnedTierName} Tier)</p>
+          <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">
+            ${p.currentCount !== null ? `Verified Activity: <strong>${p.currentCount.toLocaleString()}</strong> ${item.metricName || 'units'}. ` : ''}Maximum milestone tier achieved.
+          </p>
+        </div>
+      `;
+    } else if (p.currentCount !== null && p.currentCount !== undefined && p.nextThreshold !== null) {
+      const minNote = p.isVerifiedMinimum ? " (Guaranteed minimum based on verified tier threshold)" : "";
+      countSummaryHTML = `
+        <div style="margin-top: 8px;">
+          <p style="font-size: 0.9rem; color: #cbd5e1;">
+            Verified Activity: <strong style="color: #bbf452;">${p.currentCount.toLocaleString()}</strong> ${item.metricName || 'units'}${minNote}
+          </p>
+          <div style="margin-top: 6px;">
+            <div class="micro-progress-bar" style="height: 6px;">
+              <div class="micro-progress-fill" style="width: ${p.progressPercent}%;"></div>
+            </div>
+            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">
+              Progress to next tier: ${p.progressPercent}% (${p.currentCount} / ${p.nextThreshold})
+            </p>
+          </div>
+          <p style="font-size: 0.85rem; color: #facc15; margin-top: 6px;">
+            🎯 <strong>${p.remainingCount} more ${item.metricName || 'units'}</strong> required to reach x${p.nextTier ? p.nextTier.tier : 1} ${p.nextTier ? p.nextTier.name : 'Next Tier'}.
+          </p>
+        </div>
+      `;
+    } else if (isEarned) {
+      countSummaryHTML = `
+        <div style="margin-top: 8px;">
+          <p style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">
+            Live count unavailable — achievement tier verified on GitHub profile.
+          </p>
+          ${p.nextTier ? `<p style="font-size: 0.85rem; color: #facc15; margin-top: 4px;">Next milestone target: x${p.nextTier.tier} ${p.nextTier.name} (${p.nextTier.threshold} ${item.metricName || 'units'}).</p>` : ''}
+        </div>
+      `;
+    } else if (item.category === "earnable") {
+      countSummaryHTML = `
+        <div style="margin-top: 8px;">
+          <p style="font-size: 0.85rem; color: #94a3b8;">
+            Target to unlock x1 ${item.tiers[0].name}: <strong>${item.tiers[0].threshold}</strong> ${item.metricName || 'units'}.
+          </p>
+          <p style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+            Not yet unlocked on public profile.
+          </p>
         </div>
       `;
     } else {
-      progressBoxHTML = `
-        <div style="background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px; margin-top: 14px;">
-          <strong style="color: #cbd5e1;">Status: ${p.status === 'earned' ? 'Earned' : 'Locked'}</strong>
-          <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">${p.progressSummary}</p>
+      countSummaryHTML = `
+        <div style="margin-top: 8px;">
+          <p style="font-size: 0.85rem; color: #94a3b8;">${item.description}</p>
         </div>
       `;
     }
+
+    // Milestones history list if available
+    let milestonesHTML = "";
+    if (milestones && milestones.length > 0) {
+      milestonesHTML = `
+        <div class="modal-milestones-box">
+          <div class="modal-milestones-title">Verified Milestone History</div>
+          <div class="modal-milestone-list">
+            ${milestones.map(m => `
+              <div class="modal-milestone-item">
+                <span style="color:#bbf452;">🎯</span>
+                ${m.url ? `<a href="https://github.com${m.url}" target="_blank" rel="noopener noreferrer">${m.target || 'Milestone PR/Issue'}</a>` : `<span>${m.target || 'Milestone'}</span>`}
+                ${m.label ? `<span>· ${m.label}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Source & Metadata footer
+    const footerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.75rem; color: #64748b;">
+        <div>Source: <span style="color: #94a3b8;">${sourceLabel}</span></div>
+        <div>Updated: <span style="color: #94a3b8;">${currentProfile.lastUpdated || 'Live'}</span></div>
+      </div>
+      <p class="modal-disclosure">
+        Public Search & REST API reflect publicly accessible repositories and events. Private contributions or unindexed activities are not visible to unauthenticated visitors.
+      </p>
+    `;
+
+    progressBoxHTML = `
+      <div style="background: rgba(74, 222, 128, 0.06); border: 1px solid rgba(74, 222, 128, 0.2); border-radius: 12px; padding: 14px; margin-top: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong style="color: #4ade80;">Status: ${isEarned ? `Verified Earned (${p.earnedTierName})` : (p.status === 'in-progress' ? 'In Progress' : 'Locked')}</strong>
+          ${confPill}
+        </div>
+        ${countSummaryHTML}
+        ${milestonesHTML}
+        ${footerHTML}
+      </div>
+    `;
     modalProgressBox.innerHTML = progressBoxHTML;
 
     modalBackdrop.classList.add("is-open");

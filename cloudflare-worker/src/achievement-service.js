@@ -1,9 +1,11 @@
 /**
  * Achievement Service: Normalizes detected GitHub achievement data against the 15-item catalogue.
+ * Includes live activity counter calculation for all 8 earnable achievements.
  */
 
 import { fetchUserAchievementsPage, fetchAchievementDetail } from "./github.js";
 import { parseAchievementsPage, parseAchievementDetail } from "./achievement-parser.js";
+import { calculateAllEarnableActivities, calculateSingleActivity } from "./activity-service.js";
 
 // Canonical Catalogue & Tier Thresholds
 const CATALOGUE = [
@@ -139,16 +141,51 @@ const CATALOGUE = [
   }
 ];
 
+const EARNABLE_IDS = new Set([
+  "pull-shark",
+  "starstruck",
+  "pair-extraordinaire",
+  "galaxy-brain",
+  "quickdraw",
+  "yolo",
+  "public-sponsor",
+  "finishing-touch"
+]);
+
 export async function getUserAchievements(username) {
   const ghRes = await fetchUserAchievementsPage(username);
 
   // When GitHub returns 404, the user's achievements tab is either hidden or empty
   const hasPublicAchievements = ghRes.ok && ghRes.status === 200;
   const rawDetected = hasPublicAchievements ? parseAchievementsPage(ghRes.html) : [];
-  const detectedMap = new Map(rawDetected.map(d => [d.slug, d]));
+
+  // Concurrently fetch hovercard details for earnable detected badges to extract milestones
+  const detectedWithDetails = await Promise.all(
+    rawDetected.map(async (badge) => {
+      if (EARNABLE_IDS.has(badge.slug)) {
+        try {
+          const detailRes = await fetchAchievementDetail(username, badge.slug);
+          if (detailRes.ok) {
+            const detail = parseAchievementDetail(detailRes.html, badge.slug);
+            return { ...badge, ...detail };
+          }
+        } catch (e) {
+          console.warn(`Detail fetch failed for ${badge.slug}:`, e.message);
+        }
+      }
+      return badge;
+    })
+  );
+
+  const detectedMap = new Map(detectedWithDetails.map(d => [d.slug, d]));
+
+  // Calculate live activity counters for all 8 earnable achievements
+  const activityResult = await calculateAllEarnableActivities(username, detectedWithDetails);
+  const activities = activityResult.activities || {};
 
   const normalizedAchievements = CATALOGUE.map(item => {
     const detected = detectedMap.get(item.id);
+    const activity = activities[item.id] || null;
 
     if (detected) {
       // Achievement is VERIFIED_EARNED
@@ -165,6 +202,19 @@ export async function getUserAchievements(username) {
         };
       }
 
+      // Build progress object using activity counter if available
+      let progress = null;
+      if (activity && activity.currentCount !== null) {
+        progress = {
+          current: activity.currentCount,
+          next: activity.nextMilestone,
+          remaining: activity.remaining,
+          label: activity.countLabel,
+          confidence: activity.confidence,
+          isMaxTier: activity.isMaxTier
+        };
+      }
+
       return {
         id: item.id,
         name: item.name,
@@ -175,10 +225,12 @@ export async function getUserAchievements(username) {
           name: earnedTierName
         },
         nextTier,
-        progress: null, // Numerical progress unavailable from tab page unless detail is fetched
+        progress,
+        activity,
         confidence: "VERIFIED",
         sourceUrl: `https://github.com/${encodeURIComponent(username)}?tab=achievements`,
-        badgeAssetUrl: detected.badgeAssetUrl || null
+        badgeAssetUrl: detected.badgeAssetUrl || null,
+        milestones: detected.milestones || []
       };
     }
 
@@ -192,6 +244,7 @@ export async function getUserAchievements(username) {
         earnedTier: null,
         nextTier: null,
         progress: null,
+        activity: null,
         confidence: "OFFICIAL_THRESHOLD",
         sourceUrl: `https://github.com/${encodeURIComponent(username)}?tab=achievements`,
         reason: "Achievement feature disabled by GitHub."
@@ -207,6 +260,7 @@ export async function getUserAchievements(username) {
         earnedTier: null,
         nextTier: null,
         progress: null,
+        activity: null,
         confidence: "OFFICIAL_THRESHOLD",
         sourceUrl: `https://github.com/${encodeURIComponent(username)}?tab=achievements`,
         reason: "Historical event concluded."
@@ -222,13 +276,26 @@ export async function getUserAchievements(username) {
         earnedTier: null,
         nextTier: null,
         progress: null,
+        activity: null,
         confidence: "OFFICIAL_THRESHOLD",
         sourceUrl: `https://github.com/${encodeURIComponent(username)}?tab=achievements`,
         reason: "Reserved for GitHub internal staff."
       };
     }
 
-    // Earnable badge
+    // Earnable badge - Unearned
+    let unearnedProgress = null;
+    if (activity && activity.currentCount !== null) {
+      unearnedProgress = {
+        current: activity.currentCount,
+        next: activity.nextMilestone,
+        remaining: activity.remaining,
+        label: activity.countLabel,
+        confidence: activity.confidence,
+        isMaxTier: false
+      };
+    }
+
     if (hasPublicAchievements) {
       return {
         id: item.id,
@@ -241,7 +308,8 @@ export async function getUserAchievements(username) {
           name: item.tiers[0].name,
           threshold: item.tiers[0].threshold
         } : null,
-        progress: null,
+        progress: unearnedProgress,
+        activity,
         confidence: "VERIFIED",
         sourceUrl: `https://github.com/${encodeURIComponent(username)}?tab=achievements`
       };
@@ -258,7 +326,8 @@ export async function getUserAchievements(username) {
         name: item.tiers[0].name,
         threshold: item.tiers[0].threshold
       } : null,
-      progress: null,
+      progress: unearnedProgress,
+      activity,
       confidence: "UNAVAILABLE",
       sourceUrl: `https://github.com/${encodeURIComponent(username)}?tab=achievements`,
       reason: "Profile achievements hidden or no public achievements unlocked."
@@ -272,14 +341,17 @@ export async function getUserAchievements(username) {
     hasPublicAchievements,
     lastUpdated: new Date().toISOString(),
     achievements: normalizedAchievements,
+    activities,
+    contextSummary: activityResult.contextSummary,
     metadata: {
-      method: "public-page-parsing",
+      method: "public-page-and-activity-detection",
       unofficial: true,
       earnableCount: normalizedAchievements.filter(a => a.category === "earnable" && a.status === "VERIFIED_EARNED").length,
       totalEarnable: 8,
       limitations: [
         "GitHub does not provide a dedicated official achievements API.",
-        "Achievement visibility requires user to have enabled 'Show Achievements on profile' in GitHub settings."
+        "Achievement visibility requires user to have enabled 'Show Achievements on profile' in GitHub settings.",
+        "Public activity counters reflect public events and repositories only."
       ]
     }
   };

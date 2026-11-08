@@ -40,41 +40,67 @@ window.AchievementDetector = (function () {
           workerSuccess = true;
 
           for (const item of proxyData.achievements) {
+            const act = item.activity || null;
+
             if (item.id === "starstruck") {
               // Merge Starstruck: pick higher tier between local repo stars and detected profile badge
-              if (item.status === "VERIFIED_EARNED" && item.earnedTier) {
-                const proxyTier = item.earnedTier.index || 1;
-                if (proxyTier > starstruckLocal.tier) {
-                  results["starstruck"] = {
-                    ...starstruckLocal,
-                    tier: proxyTier,
-                    status: "earned",
-                    confidence: "VERIFIED"
-                  };
-                }
-              }
+              const proxyTier = item.earnedTier ? (item.earnedTier.index || 1) : 0;
+              const bestTier = Math.max(proxyTier, starstruckLocal.tier || 0);
+              const bestCount = Math.max(starstruckLocal.count || 0, act ? (act.currentCount || 0) : 0);
+
+              results["starstruck"] = {
+                ...starstruckLocal,
+                tier: bestTier,
+                status: bestTier > 0 ? "earned" : starstruckLocal.status,
+                count: bestCount,
+                currentCount: bestCount,
+                countLabel: act ? act.countLabel : starstruckLocal.countLabel,
+                nextMilestone: act ? act.nextMilestone : starstruckLocal.nextMilestone,
+                remaining: act ? act.remaining : starstruckLocal.remaining,
+                confidence: "VERIFIED",
+                source: act ? act.source : (starstruckLocal.detectionMeta ? `github-public-repos (${starstruckLocal.detectionMeta.bestRepoName})` : "github-public-repos"),
+                activity: act,
+                milestones: act?.milestones || item.milestones || []
+              };
               continue;
             }
 
             if (item.status === "VERIFIED_EARNED") {
+              const earnedIndex = item.earnedTier ? item.earnedTier.index : 1;
+              const earnedName = item.earnedTier ? item.earnedTier.name : "Default";
+              const currentVal = act && act.currentCount !== null ? act.currentCount : (item.earnedTier ? item.earnedTier.threshold : null);
+
               results[item.id] = {
                 status: "earned",
-                tier: item.earnedTier ? item.earnedTier.index : 1,
-                tierName: item.earnedTier ? item.earnedTier.name : "Default",
-                count: item.earnedTier ? item.earnedTier.threshold : null,
+                tier: earnedIndex,
+                tierName: earnedName,
+                count: currentVal,
+                currentCount: currentVal,
+                countLabel: act ? act.countLabel : null,
+                nextMilestone: act ? act.nextMilestone : (item.nextTier ? item.nextTier.threshold : null),
+                remaining: act ? act.remaining : null,
+                confidence: act ? act.confidence : "VERIFIED",
+                source: act ? act.source : "github-achievement-pages",
+                activity: act,
                 corsRestricted: false,
-                confidence: "VERIFIED",
                 sourceUrl: item.sourceUrl,
                 badgeAssetUrl: item.badgeAssetUrl,
+                milestones: act?.milestones || item.milestones || [],
                 notes: `Verified earned on public GitHub profile.`
               };
             } else if (item.status === "VERIFIED_NOT_EARNED") {
               results[item.id] = {
                 status: "locked",
                 tier: 0,
-                count: 0,
+                count: act ? act.currentCount : 0,
+                currentCount: act ? act.currentCount : 0,
+                countLabel: act ? act.countLabel : null,
+                nextMilestone: act ? act.nextMilestone : (item.nextTier ? item.nextTier.threshold : 1),
+                remaining: act ? act.remaining : (item.nextTier ? item.nextTier.threshold : 1),
+                confidence: act ? act.confidence : "VERIFIED",
+                source: act ? act.source : "github-achievement-pages",
+                activity: act,
                 corsRestricted: false,
-                confidence: "VERIFIED",
                 notes: `Verified as not yet unlocked on profile.`
               };
             } else if (item.status === "RETIRED") {
@@ -255,7 +281,7 @@ window.AchievementDetector = (function () {
     const cleanUrl = BACKEND_URL.replace(/\/$/, "");
     const url = `${cleanUrl}/api/analyze/${encodeURIComponent(username)}`;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     try {
       const resp = await fetch(url, {
