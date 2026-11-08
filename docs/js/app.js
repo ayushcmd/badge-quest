@@ -232,32 +232,258 @@
     return '<span class="' + classes.join(" ") + '">' + icon(locked ? "lock" : name) + "</span>";
   }
 
-  function questCard(quest, index) {
+  function questMaxXp(quest) {
+    return quest.steps.length * XP_STEP + XP_QUIZ;
+  }
+
+  function questProgressInfo(quest, index) {
     const unlocked = isUnlocked(index);
     const done = questDone(quest);
-    const blocker = blockingQuest(index);
-    const status = done
-      ? '<span class="pill is-done">Complete</span>'
-      : unlocked
-        ? '<span class="pill is-open">Open</span>'
-        : '<span class="pill is-locked">Locked</span>';
-    const pills =
-      '<div class="pills"><span class="pill">' + esc(quest.difficulty) + '</span><span class="pill">' + esc(tierText(quest)) + "</span>" +
-      (quest.optional ? '<span class="pill">Optional</span>' : "") +
-      "</div>";
-    const progress = unlocked
-      ? "<p>" + stepsDone(quest) + " of " + quest.steps.length + " steps ticked" + (quizPassed(quest) ? ", quiz passed" : "") + ".</p>"
-      : "<p>Finish Level " + (questIndex(blocker) + 1) + " first.</p>";
-    const inner =
-      '<div class="quest-top"><span class="level-tag">Level ' + (index + 1) + "</span>" + status + "</div>" +
-      '<div class="quest-top">' + medal(quest.icon, !unlocked, false) + "</div>" +
-      "<h3>" + esc(quest.title) + "</h3>" +
-      pills +
-      progress;
-    if (unlocked) {
-      return '<a class="quest-card clay' + (done ? " is-done" : "") + '" href="#/quest/' + quest.id + '">' + inner + "</a>";
+    const steps = stepsDone(quest);
+    const totalSteps = quest.steps.length;
+    const quiz = quizPassed(quest);
+    const earned = questXp(quest);
+    const max = questMaxXp(quest);
+    const percent = percentOf(earned, max);
+    let state = "locked";
+    if (done) {
+      state = "completed";
+    } else if (unlocked) {
+      if (steps > 0 || quiz || (drafts[quest.id] && Object.keys(drafts[quest.id]).length > 0)) {
+        state = "in-progress";
+      } else {
+        state = "available";
+      }
     }
-    return '<div class="quest-card clay is-locked">' + inner + "</div>";
+    return {
+      unlocked: unlocked,
+      done: done,
+      steps: steps,
+      totalSteps: totalSteps,
+      quiz: quiz,
+      earnedXp: earned,
+      maxXp: max,
+      percent: percent,
+      state: state
+    };
+  }
+
+  function renderBadgeyBeacon(label) {
+    return (
+      '<div class="map-badgey-beacon" aria-label="Current mission: ' + esc(label) + '">' +
+      '<div class="map-badgey-bubble">' + esc(label) + "</div>" +
+      '<div class="map-badgey" aria-hidden="true">' +
+      '<div class="map-badgey-ribbon left"></div><div class="map-badgey-ribbon right"></div>' +
+      '<div class="map-badgey-body">' +
+      '<div class="map-badgey-star"></div>' +
+      '<div class="map-badgey-eye left"></div><div class="map-badgey-eye right"></div>' +
+      '<div class="map-badgey-mouth"></div>' +
+      "</div></div></div>"
+    );
+  }
+
+  function renderConnector(fromSide, toSide, status) {
+    let d = "M 50 0 L 50 50";
+    if (fromSide === "left" && toSide === "right") {
+      d = "M 25 0 C 25 32, 75 18, 75 50";
+    } else if (fromSide === "right" && toSide === "left") {
+      d = "M 75 0 C 75 32, 25 18, 25 50";
+    } else if (fromSide === "left" && toSide === "center") {
+      d = "M 25 0 C 25 32, 50 18, 50 50";
+    } else if (fromSide === "right" && toSide === "center") {
+      d = "M 75 0 C 75 32, 50 18, 50 50";
+    } else if (fromSide === "center" && toSide === "center") {
+      d = "M 50 0 L 50 50";
+    }
+    const statusClass = status ? " is-" + status : "";
+    return (
+      '<div class="trail-connector-wrap' + statusClass + '" aria-hidden="true">' +
+      '<svg class="trail-connector" viewBox="0 0 100 50" preserveAspectRatio="none">' +
+      '<path class="trail-path-shadow" d="' + d + '"/>' +
+      '<path class="trail-path-road" d="' + d + '"/>' +
+      '<path class="trail-path-track" d="' + d + '"/>' +
+      "</svg></div>"
+    );
+  }
+
+  function renderMapNode(quest, index, side, activeQuest) {
+    const displayLevel = index + 1;
+    const info = questProgressInfo(quest, index);
+    const blocker = blockingQuest(index);
+    const isBoss = quest.id === "missing-badge";
+    const isActive = activeQuest && activeQuest.id === quest.id;
+    const isAllComplete = !activeQuest && isBoss && questDone(quest);
+
+    let statusPill = "";
+    if (info.state === "completed") {
+      statusPill = '<span class="pill is-done">✓ Complete</span>';
+    } else if (info.state === "in-progress") {
+      statusPill = '<span class="pill is-progress">⚡ In Progress</span>';
+    } else if (info.state === "available") {
+      statusPill = '<span class="pill is-open">★ Available</span>';
+    } else {
+      statusPill = '<span class="pill is-locked">🔒 Locked</span>';
+    }
+
+    const xpLabel = info.state === "completed"
+      ? '<span class="node-xp is-earned">' + info.maxXp + " / " + info.maxXp + " XP</span>"
+      : '<span class="node-xp">+' + info.maxXp + " XP</span>";
+
+    let stepSummary = "";
+    if (info.state === "completed") {
+      stepSummary = "All " + info.totalSteps + " steps completed & quiz passed.";
+    } else if (info.state === "in-progress") {
+      stepSummary = info.steps + " of " + info.totalSteps + " steps ticked" + (info.quiz ? ", quiz passed" : "") + ".";
+    } else if (info.state === "available") {
+      stepSummary = "0 of " + info.totalSteps + " steps ticked. Ready to start!";
+    } else {
+      stepSummary = "Finish Level " + (questIndex(blocker) + 1) + " (" + esc(blocker ? blocker.title : "") + ") first.";
+    }
+
+    const levelHeader = isBoss
+      ? '<span class="level-tag is-boss">👑 Boss Level • Level ' + displayLevel + "</span>"
+      : '<span class="level-tag">Level ' + displayLevel + "</span>";
+
+    let beaconHtml = "";
+    if (isActive) {
+      beaconHtml = renderBadgeyBeacon(info.state === "in-progress" ? "Current Quest!" : "Start Here!");
+    } else if (isAllComplete) {
+      beaconHtml = renderBadgeyBeacon("All Cleared!");
+    }
+
+    const tokenInner =
+      '<div class="milestone-token is-' + info.state + (isActive ? " is-active" : "") + '">' +
+      '<span class="token-level">L' + displayLevel + "</span>" +
+      medal(quest.icon, !info.unlocked, false) +
+      (info.state === "completed" ? '<span class="token-check" aria-hidden="true">✓</span>' : "") +
+      "</div>";
+
+    const progressBarHtml = info.unlocked
+      ? '<div class="node-progress-box">' +
+        '<div class="node-progress-track">' +
+        '<div class="node-progress-fill is-' + info.state + '" style="width:' + info.percent + '%"></div>' +
+        "</div>" +
+        '<div class="node-progress-meta"><span>' + esc(stepSummary) + '</span><span class="node-pct">' + info.percent + "%</span></div>" +
+        "</div>"
+      : '<p class="node-locked-text">' + esc(stepSummary) + "</p>";
+
+    const pillsHtml =
+      '<div class="pills">' +
+      '<span class="pill">' + esc(quest.difficulty) + "</span>" +
+      '<span class="pill">' + esc(tierText(quest)) + "</span>" +
+      (quest.optional ? '<span class="pill is-optional-tag">Optional</span>' : "") +
+      "</div>";
+
+    let ctaHtml = "";
+    if (info.state === "completed") {
+      ctaHtml = '<span class="node-cta">Review Level →</span>';
+    } else if (info.state === "in-progress") {
+      ctaHtml = '<span class="node-cta is-active-btn">Continue Quest →</span>';
+    } else if (info.state === "available") {
+      ctaHtml = '<span class="node-cta is-active-btn">Start Mission →</span>';
+    } else {
+      ctaHtml = '<span class="node-cta is-locked-cta">Locked</span>';
+    }
+
+    const cardContent =
+      '<div class="node-token-col">' + beaconHtml + tokenInner + "</div>" +
+      '<div class="node-body">' +
+      '<div class="node-top">' + levelHeader + statusPill + xpLabel + "</div>" +
+      '<h3 class="node-title">' + esc(quest.title) + "</h3>" +
+      pillsHtml +
+      progressBarHtml +
+      '<div class="node-footer">' + ctaHtml + "</div>" +
+      "</div>";
+
+    const cardClasses = [
+      "trail-node-card",
+      "clay",
+      "is-" + info.state,
+      isActive ? "is-active" : "",
+      isBoss ? "is-boss" : ""
+    ].filter(Boolean).join(" ");
+
+    const inner = info.unlocked
+      ? '<a class="' + cardClasses + '" href="#/quest/' + quest.id + '">' + cardContent + "</a>"
+      : '<div class="' + cardClasses + '">' + cardContent + "</div>";
+
+    return '<div class="trail-row is-' + side + (isBoss ? " is-boss-row" : "") + '">' + inner + "</div>";
+  }
+
+  function renderAdventureMap(activeQuest) {
+    const mainQuestIndices = [0, 1, 2, 3, 4, 5, 6, 8];
+    const sideMap = ["left", "right", "left", "right", "left", "right", "left", "center"];
+    const sponsorQuest = quests[7];
+    const parts = [];
+
+    parts.push(
+      '<section class="adventure-map-section" aria-label="Quest Adventure Map">' +
+      '<div class="map-header clay">' +
+      '<div class="map-header-top">' +
+      "<div>" +
+      '<span class="eyebrow">Interactive Trail</span>' +
+      "<h2>Adventure Quest Map</h2>" +
+      '<p>Journey along the winding path from Base Camp to the Boss Citadel. Tick real steps, pass quizzes, and earn clay medals for your shelf.</p>' +
+      "</div>" +
+      '<div class="map-stats-summary">' +
+      '<div class="map-stat-pill"><strong>' + doneCount() + " of " + quests.length + "</strong> Completed</div>" +
+      '<div class="map-stat-pill"><strong>' + totalXp() + " of " + maxXp() + "</strong> XP</div>" +
+      '<div class="map-stat-pill">Rank: <strong>' + rankName() + "</strong></div>" +
+      "</div>" +
+      "</div>" +
+      '<div class="map-legend" aria-label="Map legend">' +
+      '<span class="legend-item"><span class="legend-dot is-available"></span> Available</span>' +
+      '<span class="legend-item"><span class="legend-dot is-progress"></span> In Progress</span>' +
+      '<span class="legend-item"><span class="legend-dot is-completed"></span> Completed</span>' +
+      '<span class="legend-item"><span class="legend-dot is-locked"></span> Locked</span>' +
+      "</div>" +
+      "</div>" +
+      '<div class="trail-container">'
+    );
+
+    for (let i = 0; i < 7; i += 1) {
+      const qIndex = mainQuestIndices[i];
+      const quest = quests[qIndex];
+      const side = sideMap[i];
+      parts.push(renderMapNode(quest, qIndex, side, activeQuest));
+
+      const nextQIndex = mainQuestIndices[i + 1];
+      const nextQuestObj = quests[nextQIndex];
+      const nextSide = sideMap[i + 1];
+      const nextInfo = questProgressInfo(nextQuestObj, nextQIndex);
+      const connStatus = nextInfo.done ? "completed" : nextInfo.unlocked ? "active" : "locked";
+      parts.push(renderConnector(side, nextSide, connStatus));
+    }
+
+    // Side Quest: Sponsor Corner (displayed separately between Level 7 and Boss Level 9)
+    const sponsorInfo = questProgressInfo(sponsorQuest, 7);
+    parts.push(
+      '<div class="side-quest-trail-block">' +
+      '<div class="side-quest-branch-label" aria-hidden="true">' +
+      '<span class="branch-pill">🌟 Optional Detour Branch</span>' +
+      "</div>" +
+      '<aside class="side-quest-section clay" aria-label="Optional Side Quest: Sponsor Corner">' +
+      '<div class="side-quest-lead">' +
+      '<div class="side-quest-badge-tag">Optional Side Quest</div>' +
+      "<h3>Sponsor Corner: Maintainer Rest Stop</h3>" +
+      "<p>Learn how GitHub Sponsors works and how to support creators. This level costs real money and is completely optional — skipping it will NOT block the Boss Level!</p>" +
+      "</div>" +
+      renderMapNode(sponsorQuest, 7, "center", activeQuest) +
+      "</aside>" +
+      "</div>"
+    );
+
+    // Connector leading to Boss Level (The Missing Badge, index 8)
+    const bossQuest = quests[8];
+    const bossInfo = questProgressInfo(bossQuest, 8);
+    const bossConnStatus = bossInfo.done ? "completed" : bossInfo.unlocked ? "active" : "locked";
+    parts.push(renderConnector("center", "center", bossConnStatus));
+
+    // Boss Level Node
+    parts.push(renderMapNode(bossQuest, 8, "center", activeQuest));
+
+    parts.push("</div></section>");
+    return parts.join("");
   }
 
   function renderHome() {
@@ -288,10 +514,7 @@
       '<div class="mini clay"><span class="num">2</span><h3>Do the steps</h3><p>Follow the steps on GitHub and tick each one when you have done it.</p></div>' +
       '<div class="mini clay"><span class="num">3</span><h3>Pass the quiz</h3><p>Answer every question correctly to finish the level and earn the medal.</p></div>' +
       "</div>" +
-      '<div class="section-title"><h2>Quest map</h2><p>Levels open one after another. Sponsor Corner is optional.</p></div>' +
-      '<div class="grid">' +
-      quests.map(questCard).join("") +
-      "</div>";
+      renderAdventureMap(next);
     return { title: "Learn GitHub badges by playing", html: html };
   }
 
