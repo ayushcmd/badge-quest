@@ -402,45 +402,10 @@
   <!-- ====================================================================
        Modal System (Badge Details & Generic Dialog)
        ==================================================================== -->
-  <!-- Badge Details Modal -->
+  <!-- Badge Details Modal (Pixel-Accurate Two-Column Modal) -->
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalBadgeTitle">
-    <div class="modal-card">
-      <button type="button" class="modal-close-btn" id="modalCloseBtn" aria-label="Close dialog">&times;</button>
-      <div class="modal-badge-hero">
-        <div class="modal-badge-img">
-          <img id="modalBadgeImg" src="assets/badges/Starstruck.png" alt="Badge preview">
-        </div>
-        <div class="modal-badge-info">
-          <h2 id="modalBadgeTitle">Achievement Name</h2>
-          <p id="modalBadgeCategory">Earnable Achievement</p>
-        </div>
-      </div>
-
-      <div class="modal-section">
-        <h4>Description</h4>
-        <p id="modalBadgeDesc">Description text goes here.</p>
-      </div>
-
-      <div class="modal-section">
-        <h4>Official Requirement</h4>
-        <p id="modalRuleText">Official requirement text.</p>
-      </div>
-
-      <div class="modal-section">
-        <h4>Tier Milestones</h4>
-        <div class="tier-ladder-row" id="modalTierLadder"></div>
-      </div>
-
-      <div id="modalProgressBox"></div>
-
-      <div class="modal-section" style="margin-top: 16px;">
-        <h4>Strategy & Tips</h4>
-        <p id="modalTipText">Honest guidance text.</p>
-      </div>
-
-      <div class="modal-disclaimer">
-        ℹ️ <strong>Note:</strong> GitHub is the sole authority for achievement grants. Badge Quest analyzes public metrics and guides your learning journey honestly.
-      </div>
+    <div class="modal-card modal-detail-card" id="modalBadgeCard">
+      <!-- Injected dynamically by openBadgeModal() in js/app.js -->
     </div>
   </div>
 

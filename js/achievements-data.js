@@ -24,7 +24,7 @@ window.ACHIEVEMENT_CATALOGUE = [
       { tier: 3, name: "Silver", threshold: 128, label: "128 merged PRs", badgeImg: "assets/badges/PullShark_Silver.png" },
       { tier: 4, name: "Gold", threshold: 1024, label: "1,024 merged PRs", badgeImg: "assets/badges/PullShark_Gold.png" }
     ],
-    metricName: "qualifying merged PRs",
+    metricName: "qualifying merged pull requests",
     borderColor: "rgba(56, 189, 248, 0.45)",
     glowColor: "rgba(56, 189, 248, 0.2)",
     tip: "Only pull requests that have been merged count. Open, closed-unmerged, or draft PRs do not qualify. Genuine open-source and collaborative pull requests are recommended."

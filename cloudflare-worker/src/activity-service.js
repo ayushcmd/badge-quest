@@ -346,6 +346,7 @@ export function calculateSingleActivity(slug, detected, context = {}) {
     source,
     notes,
     milestones,
+    unlockedAt: detected?.unlockedAt || null,
     lastUpdated: new Date().toISOString()
   };
 }

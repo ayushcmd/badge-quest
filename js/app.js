@@ -82,15 +82,7 @@
 
   // Modal Elements
   const modalBackdrop = document.getElementById("modalBackdrop");
-  const modalCloseBtn = document.getElementById("modalCloseBtn");
-  const modalBadgeImg = document.getElementById("modalBadgeImg");
-  const modalBadgeTitle = document.getElementById("modalBadgeTitle");
-  const modalBadgeCategory = document.getElementById("modalBadgeCategory");
-  const modalBadgeDesc = document.getElementById("modalBadgeDesc");
-  const modalRuleText = document.getElementById("modalRuleText");
-  const modalTierLadder = document.getElementById("modalTierLadder");
-  const modalProgressBox = document.getElementById("modalProgressBox");
-  const modalTipText = document.getElementById("modalTipText");
+  const modalBadgeCard = document.getElementById("modalBadgeCard");
 
   // Generic Dialog Modal (About / Leaderboard)
   const genericModalBackdrop = document.getElementById("genericModalBackdrop");
@@ -523,171 +515,623 @@
   }
 
   /**
-   * Modal dialog handlers.
+   * Achievement Guidance Checklist
    */
-  function openBadgeModal(badgeId) {
-    if (!currentProfile) return;
-    const item = currentProfile.catalogue.find(a => a.id === badgeId);
-    if (!item) return;
+  const ACHIEVEMENT_TIPS = {
+    "pull-shark": [
+      "Focus on genuine, meaningful contributions.",
+      "Get your PRs reviewed and merged.",
+      "Contribute to open-source and collaborative projects."
+    ],
+    "starstruck": [
+      "Build useful repositories and developer tools.",
+      "Share projects with relevant developer communities.",
+      "Track the highest-starred eligible repository."
+    ],
+    "pair-extraordinaire": [
+      "Collaborate with other contributors on shared repositories.",
+      "Add Co-authored-by Git trailers to commits.",
+      "Make qualifying co-authored merged PRs."
+    ],
+    "galaxy-brain": [
+      "Participate in qualifying GitHub Discussions.",
+      "Provide clear, well-explained and useful solutions.",
+      "Get your replies marked as accepted answers."
+    ],
+    "finishing-touch": [
+      "Focus on frontend UI, styling, and UX refinements.",
+      "Improve design components and accessibility.",
+      "Qualifies via merged UI-dedicated pull requests."
+    ],
+    "quickdraw": [
+      "Close an issue or PR within 5 minutes of opening.",
+      "Applies to repository issues and pull requests.",
+      "Often unlocked during rapid issue triage or testing."
+    ],
+    "yolo": [
+      "Merge a qualifying PR without a peer code review.",
+      "Works on personal repos without branch protection.",
+      "Requires genuine pull request creation and merge."
+    ],
+    "public-sponsor": [
+      "Sponsor open-source work via GitHub Sponsors.",
+      "Ensure sponsorship visibility is set to Public.",
+      "Applies to active community open-source sponsorships."
+    ],
+    "heart-on-your-sleeve": [
+      "Experimental badge tested in early 2022.",
+      "Disabled by GitHub; cannot currently be earned.",
+      "Preserved for historical reference and catalogue completion."
+    ],
+    "open-sourcerer": [
+      "Experimental multi-repository contribution badge.",
+      "Never officially released to public accounts.",
+      "Preserved for historical reference and catalogue records."
+    ],
+    "arctic-code-vault-contributor": [
+      "Archived on Feb 2, 2020 in the Svalbard Arctic World Archive.",
+      "Historical snapshot event concluded.",
+      "Awarded to contributors of archived public repositories."
+    ],
+    "mars-2020-contributor": [
+      "Celebrates NASA's Mars 2020 Ingenuity Helicopter mission.",
+      "Awarded to contributors of mission-critical dependencies.",
+      "Historical milestone permanently completed."
+    ],
+    "proxima-pioneer": [
+      "Internal GitHub employee testing milestone (M0).",
+      "Restricted exclusively to GitHub engineering staff.",
+      "Excluded from public user completion totals."
+    ],
+    "proxima-staffshipper": [
+      "Internal GitHub deployment milestone (M8).",
+      "Restricted exclusively to GitHub engineering staff.",
+      "Excluded from public user completion totals."
+    ],
+    "proxima-staffuser": [
+      "Internal GitHub employee team platform adoption.",
+      "Restricted exclusively to GitHub engineering staff.",
+      "Excluded from public user completion totals."
+    ]
+  };
 
-    modalBadgeImg.src = item.progress.badgeImg;
-    modalBadgeTitle.textContent = item.name;
-    modalBadgeCategory.textContent = `${item.availability} • ${item.confidence}`;
-    modalBadgeDesc.textContent = item.description;
-    modalRuleText.textContent = item.officialRule;
-    modalTipText.textContent = item.tip;
+  const MODAL_ICONS = {
+    barChart: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round"><path d="M4 16v-4m6 4V4m6 12v-8"/></svg>`,
+    layers: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l8-4 8 4-8 4-8-4zm0 6l8 4 8-4M2 9l8 4 8-4"/></svg>`,
+    clock: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>`,
+    book: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H18V3H6.5A2.5 2.5 0 0 0 4 5.5v14z"/><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H18"/></svg>`,
+    target: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#00e676" stroke-width="2" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 2v2m0 12v2M2 10h2m12 0h2"/></svg>`,
+    bulb: `<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h2m-3-3h4M10 2a6 6 0 0 0-6 6c0 2.22 1.21 4.16 3 5.2V15h6v-1.8c1.79-1.04 3-2.98 3-5.2a6 6 0 0 0-6-6z"/></svg>`,
+    prMerge: `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M5 3.254V3.25a.75.75 0 1 1 1.5 0v.004a2.501 2.501 0 0 1 1.77 1.77h3.48a.75.75 0 0 1 0 1.5H8.27A2.501 2.501 0 0 1 5.75 8.25v2.504a2.501 2.501 0 1 1-1.5 0V5.754a2.5 2.5 0 0 1 .75-4.496V1.25a.75.75 0 0 1 1.5 0v2.004zm0 2.496a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm0 6.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>`,
+    github: `<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>`,
+    refresh: `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 8a5.5 5.5 0 0 1 9.35-3.92L14 6m-.5-4v4h-4M13.5 8a5.5 5.5 0 0 1-9.35 3.92L2 10m.5 4v-4h4"/></svg>`,
+    external: `<svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path fill-rule="evenodd" d="M4 2.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0V3.707L4.354 10.354a.5.5 0 1 1-.708-.708L10.293 3H4.5a.5.5 0 0 1-.5-.5z"/></svg>`
+  };
 
-    // Render Tier Ladder
-    if (item.tiers && item.tiers.length > 0) {
-      modalTierLadder.innerHTML = item.tiers.map((t, idx) => {
-        const isEarned = item.progress.earnedTierLevel >= (idx + 1);
-        const isCurrent = item.progress.earnedTierLevel === (idx + 1);
-        const isNext = item.progress.nextTier && item.progress.nextTier.tier === t.tier;
+  function formatMilestoneDate(dateStr) {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      }
+    } catch (e) {}
+    return String(dateStr);
+  }
 
-        let tierClass = "is-locked";
-        let tierPillText = t.label || `Tier ${t.tier}`;
+  function getHeaderStatusPill(item, p) {
+    if (item.category === "earnable") {
+      if (p.earnedTierLevel > 0) {
+        if (item.tiers && item.tiers.length > 1) {
+          const tierName = p.earnedTierName || (item.tiers[p.earnedTierLevel - 1] ? item.tiers[p.earnedTierLevel - 1].name : "Earned");
+          const tierClass = `tier-${tierName.toLowerCase()}`;
+          return `<span class="modal-status-pill ${tierClass}">🏆 x${p.earnedTierLevel} ${tierName} Earned</span>`;
+        }
+        return `<span class="modal-status-pill status-earned">✔ Earned</span>`;
+      }
+      if (p.status === "in-progress") {
+        return `<span class="modal-status-pill status-progress">⏱ In Progress</span>`;
+      }
+      return `<span class="modal-status-pill status-locked">🔒 Locked</span>`;
+    }
+    if (item.category === "disabled") {
+      return `<span class="modal-status-pill status-disabled">⛔ Disabled</span>`;
+    }
+    if (item.category === "retired") {
+      if (p.status === "earned") {
+        return `<span class="modal-status-pill status-earned">✔ Earned (Historical Event)</span>`;
+      }
+      return `<span class="modal-status-pill status-retired">📦 Retired</span>`;
+    }
+    if (item.category === "internal") {
+      return `<span class="modal-status-pill status-internal">🏢 GitHub Staff Only</span>`;
+    }
+    return `<span class="modal-status-pill status-locked">🔒 Unavailable</span>`;
+  }
+
+  function renderProgressCard(item, p, confidenceLevel, isEarned) {
+    const isMultiTier = item.tiers && item.tiers.length > 1;
+
+    if (item.category === "earnable" && isMultiTier) {
+      let bigCounterHTML = "";
+      let trackWidth = 0;
+      let pctLabel = "0%";
+      let remainingHTML = "";
+      const metricLabel = item.metricName
+        ? (item.metricName.toLowerCase().startsWith("qualifying")
+            ? item.metricName.charAt(0).toUpperCase() + item.metricName.slice(1)
+            : `Qualifying ${item.metricName}`)
+        : "Qualifying activity";
+      const shortMetric = item.id === "pull-shark" ? "qualifying merged PRs" : (item.metricName || "milestones");
+
+      if (p.isMaxTier) {
+        const topThresh = item.tiers[item.tiers.length - 1].threshold;
+        const countVal = p.currentCount ? p.currentCount.toLocaleString() : `${topThresh.toLocaleString()}+`;
+        bigCounterHTML = `<span class="current-num">${countVal}</span> <span class="divider-num">/</span> <span class="target-num">${topThresh.toLocaleString()}</span>`;
+        trackWidth = 100;
+        pctLabel = "100%";
+        remainingHTML = `🏆 <strong>Max Tier Complete</strong> · ${p.earnedTierName} milestone unlocked`;
+      } else if (p.currentCount !== null && p.currentCount !== undefined && p.nextThreshold !== null) {
+        bigCounterHTML = `<span class="current-num">${p.currentCount.toLocaleString()}</span> <span class="divider-num">/</span> <span class="target-num">${p.nextThreshold.toLocaleString()}</span>`;
+        trackWidth = Math.min(100, Math.max(0, p.progressPercent || 0));
+        pctLabel = `${trackWidth}%`;
+        const nextName = p.nextTier ? `x${p.nextTier.tier} ${p.nextTier.name}` : "Next Tier";
+        remainingHTML = `🎯 <strong>${p.remainingCount.toLocaleString()} more</strong> ${shortMetric} to reach ${nextName}.`;
+      } else if (isEarned) {
+        bigCounterHTML = `<span class="current-num">${p.earnedTierName}</span> <span class="divider-num">Tier</span>`;
+        trackWidth = Math.min(100, Math.max(0, p.progressPercent || 0));
+        pctLabel = `${trackWidth}%`;
+        const nextName = p.nextTier ? `x${p.nextTier.tier} ${p.nextTier.name}` : "Next Tier";
+        remainingHTML = `🎯 Target next: ${nextName}`;
+      } else {
+        const firstThresh = item.tiers[0].threshold;
+        bigCounterHTML = `<span class="current-num">0</span> <span class="divider-num">/</span> <span class="target-num">${firstThresh.toLocaleString()}</span>`;
+        trackWidth = 0;
+        pctLabel = "0%";
+        remainingHTML = `🎯 <strong>${firstThresh.toLocaleString()} more</strong> ${shortMetric} to reach x1 ${item.tiers[0].name}.`;
+      }
+
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.barChart}</span>
+              <span>Your Progress</span>
+            </div>
+            <span class="confidence-pill confidence-${confidenceLevel.toLowerCase()}">${confidenceLevel.replace(/_/g, ' ')}</span>
+          </div>
+          <div class="progress-big-counter">
+            ${bigCounterHTML}
+          </div>
+          <div class="progress-activity-label">${metricLabel}</div>
+          <div class="progress-track-row">
+            <div class="modal-progress-track">
+              <div class="modal-progress-fill" style="width: ${trackWidth}%;"></div>
+            </div>
+            <span class="modal-progress-pct">${pctLabel}</span>
+          </div>
+          <div class="progress-remaining-line">
+            ${remainingHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "earnable" && !isMultiTier) {
+      const isUnlocked = isEarned || p.status === "earned";
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.barChart}</span>
+              <span>Your Progress</span>
+            </div>
+            <span class="confidence-pill confidence-${confidenceLevel.toLowerCase()}">${confidenceLevel.replace(/_/g, ' ')}</span>
+          </div>
+          <div class="progress-big-counter">
+            <span class="current-num" style="${isUnlocked ? 'color: #00e676;' : 'color: #94a3b8;'}">${isUnlocked ? '1' : '0'}</span>
+            <span class="divider-num">/</span>
+            <span class="target-num">1</span>
+          </div>
+          <div class="progress-activity-label">${item.metricName ? (item.metricName.toLowerCase().startsWith('qualifying') ? item.metricName.charAt(0).toUpperCase() + item.metricName.slice(1) : `Qualifying ${item.metricName}`) : 'Qualifying milestone event'}</div>
+          <div class="progress-track-row">
+            <div class="modal-progress-track">
+              <div class="modal-progress-fill" style="width: ${isUnlocked ? 100 : 0}%;"></div>
+            </div>
+            <span class="modal-progress-pct">${isUnlocked ? '100%' : '0%'}</span>
+          </div>
+          <div class="progress-remaining-line">
+            ${isUnlocked ? '🏆 <strong>Milestone Complete</strong> · Verified on GitHub profile' : '🎯 Complete the required action to unlock this achievement.'}
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "disabled") {
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.barChart}</span>
+              <span>Achievement Status</span>
+            </div>
+            <span class="confidence-pill confidence-disabled">DISABLED</span>
+          </div>
+          <div class="progress-big-counter">
+            <span class="current-num" style="color: #f87171; font-size: 1.85rem;">⛔ Inactive</span>
+          </div>
+          <div class="progress-activity-label">Experimental feature tested by GitHub</div>
+          <div class="progress-remaining-line" style="color: #94a3b8;">
+            ℹ️ <strong>Disabled by GitHub.</strong> Not active for new accounts; preserved for historical records only.
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "retired") {
+      const isUnlocked = isEarned || p.status === "earned";
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.barChart}</span>
+              <span>Historical Event Status</span>
+            </div>
+            <span class="confidence-pill confidence-verified">HISTORICAL</span>
+          </div>
+          <div class="progress-big-counter">
+            <span class="current-num" style="${isUnlocked ? 'color: #38bdf8;' : 'color: #94a3b8; font-size: 1.85rem;'}">
+              ${isUnlocked ? '✔ Contributor' : '📦 Event Ended'}
+            </span>
+          </div>
+          <div class="progress-activity-label">${isUnlocked ? 'Verified historical milestone contributor' : 'Official event milestone permanently closed'}</div>
+          <div class="progress-remaining-line">
+            ${isUnlocked ? '🏆 <strong>Historical contributor verified.</strong>' : 'ℹ️ <strong>Event concluded.</strong> Preserved for accounts that contributed during the snapshot.'}
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "internal") {
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.barChart}</span>
+              <span>Internal Status</span>
+            </div>
+            <span class="confidence-pill confidence-internal" style="background: rgba(45, 212, 191, 0.15); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.35);">STAFF ONLY</span>
+          </div>
+          <div class="progress-big-counter">
+            <span class="current-num" style="color: #2dd4bf; font-size: 1.85rem;">🏢 GitHub Staff</span>
+          </div>
+          <div class="progress-activity-label">Exclusive internal employee milestone</div>
+          <div class="progress-remaining-line" style="color: #94a3b8;">
+            ℹ️ <strong>Reserved for GitHub staff.</strong> Excluded from public completion totals.
+          </div>
+        </div>
+      `;
+    }
+
+    return "";
+  }
+
+  function renderTierMilestonesCard(item, p) {
+    const isMultiTier = item.tiers && item.tiers.length > 1;
+
+    if (item.category === "earnable" && isMultiTier) {
+      const tierCardsHTML = item.tiers.map((t, idx) => {
+        const tierNum = idx + 1;
+        const isPassed = p.earnedTierLevel > tierNum;
+        const isCurrent = p.earnedTierLevel === tierNum;
+        const isNext = p.nextTier && p.nextTier.tier === tierNum;
+
+        let cardClass = "tier-milestone-card";
+        let topPill = `x${tierNum}`;
 
         if (isCurrent) {
-          tierClass = "is-current";
-          tierPillText = `✔ Current: ${t.name}`;
-        } else if (isEarned) {
-          tierClass = "is-passed";
-          tierPillText = `✔ Passed`;
+          cardClass += ` is-current is-${t.name.toLowerCase()}`;
+          topPill = `✔ x${tierNum}`;
+        } else if (isPassed) {
+          cardClass += " is-passed";
+          topPill = `✔ x${tierNum}`;
         } else if (isNext) {
-          tierClass = "is-next";
-          tierPillText = `🎯 Next Target`;
+          cardClass += " is-next";
+          topPill = `x${tierNum}`;
+        } else {
+          cardClass += " is-locked";
+          topPill = `x${tierNum}`;
         }
 
         return `
-          <div class="tier-step ${tierClass}">
-            <div class="tier-step-dot">${t.tier}</div>
-            <div class="tier-step-name">${t.name}</div>
-            <div class="tier-step-thresh">${t.threshold !== null ? t.threshold.toLocaleString() : 'Special'}</div>
-            <div class="tier-step-pill">${tierPillText}</div>
+          <div class="${cardClass}">
+            <span class="tier-top-pill">${topPill}</span>
+            <span class="tier-thresh-num">${t.threshold !== null ? t.threshold.toLocaleString() : '—'}</span>
+            <span class="tier-name-label">${t.name}</span>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.layers}</span>
+              <span>Tier Milestones</span>
+            </div>
+          </div>
+          <div class="tier-milestones-grid">
+            ${tierCardsHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "earnable" && !isMultiTier) {
+      const isUnlocked = p.status === "earned";
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.target}</span>
+              <span>Milestone Requirement</span>
+            </div>
+          </div>
+          <div class="single-tier-panel">
+            <div class="single-tier-status-box ${isUnlocked ? 'is-earned' : ''}">
+              <div>
+                <div class="single-tier-title">${isUnlocked ? '✔ Milestone Unlocked & Verified' : '🔒 Single Milestone Requirement'}</div>
+                <div class="single-tier-desc">${item.officialRule}</div>
+              </div>
+              <div style="text-align: right; font-weight: 700; font-size: 0.85rem; color: ${isUnlocked ? '#4ade80' : '#94a3b8'};">
+                ${isUnlocked ? '1 / 1 Completed' : '0 / 1 Pending'}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "disabled" && item.tiers && item.tiers.length > 0) {
+      const tierCardsHTML = item.tiers.map((t, idx) => `
+        <div class="tier-milestone-card is-locked" style="opacity: 0.5;">
+          <span class="tier-top-pill">x${idx + 1}</span>
+          <span class="tier-thresh-num">${t.name}</span>
+          <span class="tier-name-label">Inactive</span>
+        </div>
+      `).join("");
+
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.layers}</span>
+              <span>Historical Tiers</span>
+            </div>
+          </div>
+          <div class="tier-milestones-grid">
+            ${tierCardsHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "retired") {
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.layers}</span>
+              <span>Historic Archive Details</span>
+            </div>
+          </div>
+          <div class="single-tier-panel">
+            <div class="single-tier-status-box">
+              <div>
+                <div class="single-tier-title">Permanent Historical Snapshot</div>
+                <div class="single-tier-desc">${item.confidenceDetails || item.officialRule}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (item.category === "internal") {
+      return `
+        <div class="modal-panel">
+          <div class="modal-panel-header">
+            <div class="modal-panel-title-group">
+              <span class="modal-panel-icon">${MODAL_ICONS.layers}</span>
+              <span>Internal Deployment Scope</span>
+            </div>
+          </div>
+          <div class="single-tier-panel">
+            <div class="single-tier-status-box">
+              <div>
+                <div class="single-tier-title">GitHub Proxima Milestone</div>
+                <div class="single-tier-desc">${item.officialRule}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return "";
+  }
+
+  function renderMilestoneHistoryCard(milestones, unlockedAt) {
+    let listHTML = "";
+
+    if (milestones && milestones.length > 0) {
+      listHTML = milestones.map(m => {
+        const displayUrl = m.url ? (m.url.startsWith("http") ? m.url : `https://github.com${m.url}`) : null;
+        const targetText = m.target || m.repo || (m.url ? m.url.replace(/^https?:\/\/github\.com\//, '').replace(/\/pull\//, '#') : "Milestone Contribution");
+        const dateText = m.date ? formatMilestoneDate(m.date) : (unlockedAt ? formatMilestoneDate(unlockedAt) : "");
+
+        return `
+          <div class="milestone-history-item">
+            <div class="milestone-history-left">
+              <div class="milestone-history-icon">
+                ${MODAL_ICONS.prMerge}
+              </div>
+              <div class="milestone-history-text">
+                ${displayUrl ? `<a href="${displayUrl}" target="_blank" rel="noopener noreferrer" class="milestone-history-link">${targetText}</a>` : `<span class="milestone-history-link">${targetText}</span>`}
+                <div class="milestone-history-label">${m.label || 'Qualifying milestone achieved'}</div>
+              </div>
+            </div>
+            <div class="milestone-history-right">
+              ${dateText ? `<span>${dateText}</span>` : ''}
+              <span style="color: #64748b;">${MODAL_ICONS.external}</span>
+            </div>
           </div>
         `;
       }).join("");
     } else {
-      modalTierLadder.innerHTML = `<p style="color:#94a3b8; font-size:0.85rem;">Single milestone achievement.</p>`;
+      listHTML = `<div class="milestone-empty">No publicly verifiable milestone history available.</div>`;
     }
 
-    // Render User Progress Details
-    const p = item.progress;
+    return `
+      <div class="modal-panel">
+        <div class="modal-panel-header">
+          <div class="modal-panel-title-group">
+            <span class="modal-panel-icon">${MODAL_ICONS.clock}</span>
+            <span>Verified Milestone History</span>
+          </div>
+        </div>
+        <div class="milestone-history-list">
+          ${listHTML}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRightColumn(item) {
+    const tips = ACHIEVEMENT_TIPS[item.id] || (item.tip ? [item.tip] : ["Contribute to open-source and follow GitHub community guidelines."]);
+
+    const tipsHTML = tips.map(t => `
+      <li>
+        <span class="tip-check-icon">✔</span>
+        <span>${t}</span>
+      </li>
+    `).join("");
+
+    return `
+      <div class="modal-info-column">
+        <div class="modal-info-section">
+          <h4><span class="modal-panel-icon">${MODAL_ICONS.book}</span> About</h4>
+          <p>${item.description}</p>
+        </div>
+
+        <div class="modal-info-section">
+          <h4><span class="modal-panel-icon">${MODAL_ICONS.target}</span> Official Requirement</h4>
+          <p>${item.officialRule}</p>
+        </div>
+
+        <div class="modal-info-section">
+          <h4><span class="modal-panel-icon">${MODAL_ICONS.bulb}</span> Strategy & Tips</h4>
+          <ul class="tips-checklist">
+            ${tipsHTML}
+          </ul>
+        </div>
+
+        <div class="modal-note-card">
+          <span class="note-icon">ⓘ</span>
+          <div class="note-text">
+            <strong>Note:</strong> GitHub is the sole authority for achievement grants. Badge Quest analyzes public metrics and guides your learning journey honestly.
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderModalFooter(sourceLabel, lastUpdatedTime) {
+    return `
+      <div class="modal-detail-footer">
+        <div class="footer-top-line">
+          <span class="footer-source-item">
+            ${MODAL_ICONS.github}
+            <span>Source: <strong>${sourceLabel}</strong></span>
+          </span>
+          <span class="footer-separator">|</span>
+          <span class="footer-source-item">
+            ${MODAL_ICONS.refresh}
+            <span>Updated: ${lastUpdatedTime}</span>
+          </span>
+        </div>
+        <p class="footer-disclosure-text">
+          Public Search & REST API reflect publicly accessible repositories and events.
+        </p>
+      </div>
+    `;
+  }
+
+  function renderBadgeModalHTML(item, currentProfile) {
+    const p = item.progress || {};
     const meta = item.detectionMeta || {};
     const act = meta.activity || null;
+    const isEarned = p.status === "earned" || p.earnedTierLevel > 0;
     const confidenceLevel = act ? act.confidence : (p.confidence || "VERIFIED");
-    const sourceLabel = act ? act.source : (meta.source || (item.id === "starstruck" ? "GitHub REST API (repos)" : "GitHub Public Activity"));
+    const sourceLabel = act ? (act.source === "github-public-search-api" ? "GitHub Public Search API" : (act.source === "github-rest-api" ? "GitHub REST API" : act.source)) : (meta.source || (item.id === "starstruck" ? "GitHub REST API (repos)" : "GitHub Public Activity"));
     const milestones = act?.milestones || meta.milestones || [];
-    const isEarned = p.status === "earned";
+    const unlockedAt = act?.unlockedAt || meta.unlockedAt || null;
+    const lastUpdated = currentProfile?.lastUpdated || new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-    let progressBoxHTML = "";
+    const statusPillHTML = getHeaderStatusPill(item, p);
+    const progressCardHTML = renderProgressCard(item, p, confidenceLevel, isEarned);
+    const tierMilestonesHTML = renderTierMilestonesCard(item, p);
+    const milestoneHistoryHTML = renderMilestoneHistoryCard(milestones, unlockedAt);
+    const rightColumnHTML = renderRightColumn(item);
+    const footerHTML = renderModalFooter(sourceLabel, lastUpdated);
 
-    // Confidence pill
-    const confClass = `confidence-${confidenceLevel.toLowerCase()}`;
-    const confPill = `<span class="confidence-pill ${confClass}">${confidenceLevel.replace(/_/g, ' ')}</span>`;
-
-    // Activity Count Details
-    let countSummaryHTML = "";
-    if (p.isMaxTier) {
-      countSummaryHTML = `
-        <div style="margin-top: 8px;">
-          <p style="font-size: 0.9rem; color: #facc15; font-weight: 700;">🏆 100% Unlocked (${p.earnedTierName} Tier)</p>
-          <p style="font-size: 0.85rem; color: #cbd5e1; margin-top: 4px;">
-            ${p.currentCount !== null ? `Verified Activity: <strong>${p.currentCount.toLocaleString()}</strong> ${item.metricName || 'units'}. ` : ''}Maximum milestone tier achieved.
-          </p>
+    return `
+      <button type="button" class="modal-close-btn" id="modalCloseBtn" aria-label="Close dialog">&times;</button>
+      
+      <div class="modal-detail-header">
+        <div class="modal-badge-avatar">
+          <img src="${p.badgeImg || item.tiers[0].badgeImg}" alt="${item.name} badge artwork">
         </div>
-      `;
-    } else if (p.currentCount !== null && p.currentCount !== undefined && p.nextThreshold !== null) {
-      const minNote = p.isVerifiedMinimum ? " (Guaranteed minimum based on verified tier threshold)" : "";
-      countSummaryHTML = `
-        <div style="margin-top: 8px;">
-          <p style="font-size: 0.9rem; color: #cbd5e1;">
-            Verified Activity: <strong style="color: #bbf452;">${p.currentCount.toLocaleString()}</strong> ${item.metricName || 'units'}${minNote}
-          </p>
-          <div style="margin-top: 6px;">
-            <div class="micro-progress-bar" style="height: 6px;">
-              <div class="micro-progress-fill" style="width: ${p.progressPercent}%;"></div>
-            </div>
-            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 4px;">
-              Progress to next tier: ${p.progressPercent}% (${p.currentCount} / ${p.nextThreshold})
-            </p>
+        <div class="modal-header-meta">
+          <h2 class="modal-header-title" id="modalBadgeTitle">${item.name}</h2>
+          <div class="modal-header-subtitle">
+            <span>${item.availability}</span>
+            <span>•</span>
+            <span>${item.confidence}</span>
           </div>
-          <p style="font-size: 0.85rem; color: #facc15; margin-top: 6px;">
-            🎯 <strong>${p.remainingCount} more ${item.metricName || 'units'}</strong> required to reach x${p.nextTier ? p.nextTier.tier : 1} ${p.nextTier ? p.nextTier.name : 'Next Tier'}.
-          </p>
-        </div>
-      `;
-    } else if (isEarned) {
-      countSummaryHTML = `
-        <div style="margin-top: 8px;">
-          <p style="font-size: 0.85rem; color: #94a3b8; font-style: italic;">
-            Live count unavailable — achievement tier verified on GitHub profile.
-          </p>
-          ${p.nextTier ? `<p style="font-size: 0.85rem; color: #facc15; margin-top: 4px;">Next milestone target: x${p.nextTier.tier} ${p.nextTier.name} (${p.nextTier.threshold} ${item.metricName || 'units'}).</p>` : ''}
-        </div>
-      `;
-    } else if (item.category === "earnable") {
-      countSummaryHTML = `
-        <div style="margin-top: 8px;">
-          <p style="font-size: 0.85rem; color: #94a3b8;">
-            Target to unlock x1 ${item.tiers[0].name}: <strong>${item.tiers[0].threshold}</strong> ${item.metricName || 'units'}.
-          </p>
-          <p style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-            Not yet unlocked on public profile.
-          </p>
-        </div>
-      `;
-    } else {
-      countSummaryHTML = `
-        <div style="margin-top: 8px;">
-          <p style="font-size: 0.85rem; color: #94a3b8;">${item.description}</p>
-        </div>
-      `;
-    }
-
-    // Milestones history list if available
-    let milestonesHTML = "";
-    if (milestones && milestones.length > 0) {
-      milestonesHTML = `
-        <div class="modal-milestones-box">
-          <div class="modal-milestones-title">Verified Milestone History</div>
-          <div class="modal-milestone-list">
-            ${milestones.map(m => `
-              <div class="modal-milestone-item">
-                <span style="color:#bbf452;">🎯</span>
-                ${m.url ? `<a href="https://github.com${m.url}" target="_blank" rel="noopener noreferrer">${m.target || 'Milestone PR/Issue'}</a>` : `<span>${m.target || 'Milestone'}</span>`}
-                ${m.label ? `<span>· ${m.label}</span>` : ''}
-              </div>
-            `).join('')}
+          <div>
+            ${statusPillHTML}
           </div>
         </div>
-      `;
-    }
-
-    // Source & Metadata footer
-    const footerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.75rem; color: #64748b;">
-        <div>Source: <span style="color: #94a3b8;">${sourceLabel}</span></div>
-        <div>Updated: <span style="color: #94a3b8;">${currentProfile.lastUpdated || 'Live'}</span></div>
       </div>
-      <p class="modal-disclosure">
-        Public Search & REST API reflect publicly accessible repositories and events. Private contributions or unindexed activities are not visible to unauthenticated visitors.
-      </p>
-    `;
 
-    progressBoxHTML = `
-      <div style="background: rgba(74, 222, 128, 0.06); border: 1px solid rgba(74, 222, 128, 0.2); border-radius: 12px; padding: 14px; margin-top: 14px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <strong style="color: #4ade80;">Status: ${isEarned ? `Verified Earned (${p.earnedTierName})` : (p.status === 'in-progress' ? 'In Progress' : 'Locked')}</strong>
-          ${confPill}
+      <div class="modal-detail-body">
+        <div class="modal-left-column">
+          ${progressCardHTML}
+          ${tierMilestonesHTML}
+          ${milestoneHistoryHTML}
         </div>
-        ${countSummaryHTML}
-        ${milestonesHTML}
-        ${footerHTML}
+        <div class="modal-right-column">
+          ${rightColumnHTML}
+        </div>
       </div>
-    `;
-    modalProgressBox.innerHTML = progressBoxHTML;
 
+      ${footerHTML}
+    `;
+  }
+
+  /**
+   * Modal dialog handlers.
+   */
+  function openBadgeModal(badgeId) {
+    if (!currentProfile || !currentProfile.catalogue) return;
+    const item = currentProfile.catalogue.find(a => a.id === badgeId);
+    if (!item) return;
+
+    const modalBadgeCard = document.getElementById("modalBadgeCard");
+    if (!modalBadgeCard) return;
+
+    modalBadgeCard.innerHTML = renderBadgeModalHTML(item, currentProfile);
     modalBackdrop.classList.add("is-open");
     document.body.style.overflow = "hidden";
   }
@@ -770,9 +1214,10 @@
     }
 
     // Modal Close
-    modalCloseBtn.addEventListener("click", closeBadgeModal);
     modalBackdrop.addEventListener("click", (e) => {
-      if (e.target === modalBackdrop) closeBadgeModal();
+      if (e.target === modalBackdrop || e.target.closest("#modalCloseBtn") || e.target.closest("[data-action='close-modal']")) {
+        closeBadgeModal();
+      }
     });
 
     genericModalCloseBtn.addEventListener("click", closeGenericModal);
