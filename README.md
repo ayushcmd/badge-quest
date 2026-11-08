@@ -1,89 +1,104 @@
-# Badge Quest
+# Badge Quest ✦ GitHub Achievement Tracker
 
-A learning repo about GitHub Achievements: what each badge needs, how to earn it the honest way, and a small game-style website that walks you through every step.
+A community learning platform and real-time GitHub Achievement Tracker: discover what each achievement needs, track your public progress honestly, and inspect milestone tiers.
 
-There are two parts:
+Hosted statically on **GitHub Pages** with **100% client-side HTML5, CSS3, and Vanilla JavaScript**.
 
-- `guides/` holds plain Markdown notes, one file per badge, plus troubleshooting, visibility settings and fair-play rules.
-- `docs/` holds the learning site, built with plain HTML, CSS and JavaScript. No build step, no dependencies. It is ready for GitHub Pages.
+No login, no Personal Access Token (PAT), no backend, and no third-party trackers required.
 
-Information last checked: 8 November 2026.
+---
 
-## The learning site
+## 🚀 Live Tracker Features
 
-The site turns the guides into nine short levels. Each level has a briefing, real steps to do on GitHub, and a short quiz. Finish the steps and pass the quiz to put a medal on your shelf. Progress is saved in your own browser with `localStorage`, so there is no account and no server.
+- **Real-Time Username Analysis:** Enter any public GitHub username to inspect their live profile, public repositories, and star counts.
+- **Starstruck Tier Verification:** Automatically evaluates your top public repository's stars against official Starstruck thresholds (16 / 128 / 512 / 4,096 stars).
+- **15-Achievement Catalogue:**
+  - **Currently Earnable (8):** Pull Shark, Starstruck, Pair Extraordinaire, Galaxy Brain, Quickdraw, YOLO, Public Sponsor, Finishing Touch.
+  - **Disabled / Historical (2):** Heart On Your Sleeve, Open Sourcerer.
+  - **Retired Events (2):** Arctic Code Vault Contributor (02/02/2020), Mars 2020 Contributor (Ingenuity mission).
+  - **Internal GitHub Staff (3):** Proxima Pioneer, Proxima Staffshipper, Proxima Staffuser.
+- **Separate Program Badges (5):** Informational cards for GitHub Developer Program Member, GitHub Pro, Security Bug Bounty Hunter, Campus Expert, and Security Advisory Credit.
+- **Multi-Tier Milestone Calculations:** Computes exact tiers (x1 Default, x2 Bronze, x3 Silver, x4 Gold), remaining units to the next milestone, and maximum tier completions.
+- **Honest Browser CORS Disclosure:** Explains browser cross-origin boundaries on static sites and provides direct one-click links to your GitHub profile achievements page (`?tab=achievements`).
+- **Quota Management & Caching:** Live rate limit quota pill, graceful 403 handling with reset countdown, and 15-minute in-browser caching with a manual Refresh button.
 
-Extra tools on the site:
+---
 
-- Tier Planner: type in your count (merged pull requests, stars, accepted answers, co-authored pull requests) and see your tier and what is left to the next one.
-- Archive: retired badges, unreleased badges and profile highlights that are not achievements.
+## 🛠️ Technology Stack & Hosting
 
-### Run it locally
+- **Frontend:** Pure HTML5, CSS3, Vanilla JavaScript ES6+.
+- **Dependencies:** Zero external npm packages, frameworks, or build steps.
+- **Deployment:** GitHub Pages served from the **repository root** (`/`).
+- **API:** Official GitHub REST API (`https://api.github.com/`).
+- **Documentation:** See [API.md](API.md) for full technical architecture and specifications.
 
-Open `docs/index.html` in a browser, or serve the folder:
+### Running Locally
+
+Serve the repository root using any static HTTP server:
 
 ```bash
-cd docs
-python3 -m http.server 8000
+# Using Python 3
+python -m http.server 8000
+
+# Using Node.js
+npx serve .
 ```
 
-Then visit `http://localhost:8000`.
+Then open `http://localhost:8000` in your web browser.
 
-### Publish it on GitHub Pages
+---
 
-1. Push this repository to GitHub.
-2. Open the repository, then Settings, then Pages.
-3. Under Build and deployment, choose Deploy from a branch.
-4. Pick the `main` branch and the `/docs` folder, then click Save.
-5. After a minute or two the site appears at `https://<your-username>.github.io/<repository-name>/`.
+## 🏆 GitHub Achievement Cheat Sheet
 
-All links inside the site are relative, so it works under a project path without changes.
+| Achievement | How to Earn | Known Milestone Thresholds | Status |
+| :--- | :--- | :--- | :--- |
+| **Starstruck** | A single repository you created and own receives stars | **x1:** 16 \| **x2:** 128 \| **x3:** 512 \| **x4:** 4,096 | Currently Earnable |
+| **Pull Shark** | Pull requests you opened are reviewed and merged | **x1:** 2 \| **x2:** 16 \| **x3:** 128 \| **x4:** 1,024 | Currently Earnable |
+| **Pair Extraordinaire** | Co-authored commits in pull requests that get merged | **x1:** 1 \| **x2:** 10 \| **x3:** 24 \| **x4:** 48 | Currently Earnable |
+| **Galaxy Brain** | Discussion replies accepted as answers | **x1:** 2 \| **x2:** 8 \| **x3:** 16 \| **x4:** 32 | Currently Earnable *(Repo Discussions)* |
+| **Finishing Touch** | Authored a merged pull request that refined UI quality | **x1:** 1 \| **x2:** 4 \| **x3:** 16 \| **x4:** 32 *(community-observed)* | Currently Earnable |
+| **Quickdraw** | Closed an issue or pull request within 5 minutes | Single milestone | Currently Earnable |
+| **YOLO** | Merged a pull request without code review | Single milestone | Currently Earnable |
+| **Public Sponsor** | Sponsoring an open-source contributor via GitHub Sponsors | Single milestone | Currently Earnable |
+| **Arctic Code Vault** | Contributed code to a repo preserved in Arctic Vault (2020) | Snapshot event | Retired / Event ended |
+| **Mars 2020** | Contributed to a repo used in NASA Mars 2020 Ingenuity | Mission event | Retired / Event ended |
+| **Heart On Your Sleeve** | Experimental emoji reactions milestone | Unknown | Disabled / Deprecated |
+| **Open Sourcerer** | Experimental multi-repo contribution milestone | Unknown | Disabled / Deprecated |
+| **Proxima (Pioneer / Shipper / User)** | Internal GitHub Next Proxima testing and shipping milestones | Staff only | Internal / Staff Only |
 
-## Badge cheat sheet
+---
 
-| Badge | How to earn it | Tiers (Default / Bronze / Silver / Gold) | Status |
-| --- | --- | --- | --- |
-| Starstruck | A single repository you created receives stars | 16 / 128 / 512 / 4096 stars | Earnable |
-| Quickdraw | Close an issue or pull request within 5 minutes of opening it | One-time | Earnable |
-| Pair Extraordinaire | Co-authored commits in pull requests that get merged | 1 / 10 / 24 / 48 pull requests | Earnable |
-| Pull Shark | Open pull requests that get merged | 2 / 16 / 128 / 1024 pull requests | Earnable |
-| Galaxy Brain | Replies accepted as answers in GitHub Discussions | 2 / 8 / 16 / 32 answers | Earnable, but not in GitHub's own Community forum |
-| YOLO | Merge a pull request without code review | One-time | Earnable |
-| Public Sponsor | Sponsor a contributor or project through GitHub Sponsors | One-time | Earnable (costs real money) |
-| Arctic Code Vault Contributor | Code in the 2020 GitHub Archive Program snapshot | Not applicable | Retired |
-| Mars 2020 Contributor | Code in repositories used by the Mars 2020 helicopter mission | Not applicable | Retired |
-| Heart On Your Sleeve, Open Sourcerer | Listed in badge assets, no published criteria | Unknown | Not released |
+## 📚 Educational Guides
 
-## Guides
+Detailed reference guides are available in the [`guides/`](guides/) directory:
 
 | File | Topic |
-| --- | --- |
+| :--- | :--- |
 | [00-overview.md](guides/00-overview.md) | What achievements are and how they work |
 | [01-profile-and-visibility.md](guides/01-profile-and-visibility.md) | Where badges show up and how to show or hide them |
-| [02-quickdraw.md](guides/02-quickdraw.md) | Quickdraw |
-| [03-pull-shark.md](guides/03-pull-shark.md) | Pull Shark |
-| [04-yolo.md](guides/04-yolo.md) | YOLO |
-| [05-pair-extraordinaire.md](guides/05-pair-extraordinaire.md) | Pair Extraordinaire |
-| [06-starstruck.md](guides/06-starstruck.md) | Starstruck |
-| [07-galaxy-brain.md](guides/07-galaxy-brain.md) | Galaxy Brain |
-| [08-public-sponsor.md](guides/08-public-sponsor.md) | Public Sponsor |
-| [09-troubleshooting.md](guides/09-troubleshooting.md) | Why a badge might not appear |
-| [10-retired-and-unreleased.md](guides/10-retired-and-unreleased.md) | Retired badges, unreleased badges, profile highlights |
-| [11-fair-play.md](guides/11-fair-play.md) | Earning badges without spamming or breaking rules |
-| [sources.md](guides/sources.md) | Where this information comes from |
+| [02-quickdraw.md](guides/02-quickdraw.md) | Quickdraw deep-dive |
+| [03-pull-shark.md](guides/03-pull-shark.md) | Pull Shark deep-dive |
+| [04-yolo.md](guides/04-yolo.md) | YOLO deep-dive |
+| [05-pair-extraordinaire.md](guides/05-pair-extraordinaire.md) | Pair Extraordinaire deep-dive |
+| [06-starstruck.md](guides/06-starstruck.md) | Starstruck deep-dive |
+| [07-galaxy-brain.md](guides/07-galaxy-brain.md) | Galaxy Brain deep-dive |
+| [08-public-sponsor.md](guides/08-public-sponsor.md) | Public Sponsor deep-dive |
+| [09-troubleshooting.md](guides/09-troubleshooting.md) | Troubleshooting badge visibility |
+| [10-retired-and-unreleased.md](guides/10-retired-and-unreleased.md) | Retired, unreleased, and internal staff badges |
+| [11-fair-play.md](guides/11-fair-play.md) | Community fair-play guidelines |
+| [sources.md](guides/sources.md) | Research sources & references |
 
-## Fair play
+---
 
-Badges are a side effect of real work, not the goal. Do not create extra accounts, spam repositories with empty pull requests, or buy stars. Read [11-fair-play.md](guides/11-fair-play.md) before you start.
+## ⚖️ Fair Play & Attribution
 
-## Contributing
+Achievements are a celebration of genuine open-source collaboration, not a target for automation or spam. Please review [11-fair-play.md](guides/11-fair-play.md).
 
-Criteria change over time. If you spot something outdated, open an issue or a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
+For third-party acknowledgments, research credits, and intellectual property notices, see [ATTRIBUTION.md](ATTRIBUTION.md).
 
-## Disclaimer
+---
 
-Badge Quest is a community learning project. It is not made by, endorsed by or affiliated with GitHub. The badge artwork on the site is original and only meant to illustrate the levels. Always check GitHub's own pages when accuracy matters.
+## 📄 License
 
-## License
-
-MIT. See [LICENSE](LICENSE).
+Badge Quest source code and documentation are released under the [MIT License](LICENSE).  
+Copyright (c) 2026 Badge Quest contributors.

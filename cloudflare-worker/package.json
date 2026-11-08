@@ -1,0 +1,18 @@
+{
+  "name": "badgequest-api",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cloudflare Worker for Badge Quest - Public GitHub Achievement Detection & Normalization",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "badge-quest",
+    "github-achievements",
+    "cloudflare-worker"
+  ],
+  "author": "Badge Quest",
+  "license": "MIT"
+}

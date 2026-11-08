@@ -1,0 +1,7 @@
+name = "badgequest-api"
+main = "src/index.js"
+compatibility_date = "2024-04-01"
+
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://ayushcmd.github.io,http://localhost:8000,http://127.0.0.1:8000"
